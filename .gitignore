@@ -47,9 +47,7 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Config with sensitive data
-config.json
-config.json.backup
+
 
 # Media files (optional - uncomment if you don't want to commit media)
 # media/*

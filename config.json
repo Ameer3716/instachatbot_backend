@@ -1,0 +1,52 @@
+{
+  "instagram": {
+    "access_token": "YOUR_INSTAGRAM_ACCESS_TOKEN_HERE",
+    "api_version": "v21.0",
+    "page_id": "YOUR_PAGE_ID_HERE"
+  },
+  
+  "openai": {
+    "api_key": "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",
+    "model": "gpt-4o-mini",
+    "system_prompt": "You are a friendly and helpful assistant for an Instagram account. You communicate naturally like a real human being. Be conversational, warm, and engaging. Keep responses concise but meaningful. Use casual language and emojis when appropriate. Always maintain a helpful and positive tone.",
+    "max_tokens": 150,
+    "temperature": 0.8
+  },
+  
+  "webhook": {
+    "verify_token": "YOUR_CUSTOM_VERIFY_TOKEN_HERE"
+  },
+  
+  "typing_delay": {
+    "base_seconds": 1.0,
+    "per_word_seconds": 0.15,
+    "max_seconds": 5.0,
+    "randomness_factor": 0.3
+  },
+  
+  "media_triggers": [
+    {
+      "name": "pricing_info",
+      "keywords": ["pricing", "price", "cost", "how much"],
+      "type": "image",
+      "path": "https://your-domain.com/media/pricing.jpg"
+    },
+    {
+      "name": "welcome_audio",
+      "keywords": ["hello", "hi", "hey"],
+      "type": "audio",
+      "path": "https://your-domain.com/media/welcome.mp3"
+    },
+    {
+      "name": "product_catalog",
+      "keywords": ["catalog", "products", "menu", "services"],
+      "type": "image",
+      "path": "https://your-domain.com/media/catalog.jpg"
+    }
+  ],
+  
+  "session": {
+    "timeout_minutes": 30,
+    "max_messages_per_session": 20
+  }
+}

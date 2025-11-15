@@ -40,10 +40,42 @@ app.add_middleware(
 )
 
 # Load configuration
-with open('config.json', 'r') as f:
-    config = json.load(f)
+# Try to load config.json, fallback to environment variables
+try:
+    with open('config.json', 'r') as f:
+        config = json.load(f)
+except FileNotFoundError:
+    # Production: use environment variables only
+    config = {
+        "instagram": {
+            "access_token": os.getenv('INSTAGRAM_ACCESS_TOKEN', 'dummy'),
+            "api_version": "v21.0",
+            "page_id": os.getenv('INSTAGRAM_PAGE_ID', 'dummy')
+        },
+        "openai": {
+            "api_key": os.getenv('OPENAI_API_KEY', ''),
+            "model": "gpt-4o-mini",
+            "system_prompt": "You are a friendly and helpful assistant for an Instagram account. You communicate naturally like a real human being. Be conversational, warm, and engaging. Keep responses concise but meaningful. Use casual language and emojis when appropriate. Always maintain a helpful and positive tone.",
+            "max_tokens": 150,
+            "temperature": 0.8
+        },
+        "webhook": {
+            "verify_token": os.getenv('WEBHOOK_VERIFY_TOKEN', 'dummy')
+        },
+        "typing_delay": {
+            "base_seconds": 1.0,
+            "per_word_seconds": 0.15,
+            "max_seconds": 5.0,
+            "randomness_factor": 0.3
+        },
+        "media_triggers": [],
+        "session": {
+            "timeout_minutes": 30,
+            "max_messages_per_session": 20
+        }
+    }
 
-# Override with environment variables if present (for production)
+# Override with environment variables if present (for config.json fallback)
 if os.getenv('OPENAI_API_KEY'):
     config['openai']['api_key'] = os.getenv('OPENAI_API_KEY')
 if os.getenv('INSTAGRAM_ACCESS_TOKEN'):

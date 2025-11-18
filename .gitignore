@@ -31,7 +31,7 @@ venv.bak/
 .env
 .env.local
 .env.production
-
+.env.
 # IDE
 .vscode/
 .idea/

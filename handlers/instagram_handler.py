@@ -16,6 +16,32 @@ class InstagramHandler:
         self.access_token = config["instagram"]["access_token"]
         self.api_version = config["instagram"]["api_version"]
         self.base_url = f"https://graph.facebook.com/{self.api_version}"
+        self.page_id = config["instagram"].get("page_id", "")
+    
+    async def get_user_info(self, user_id: str) -> dict:
+        """
+        Fetch Instagram user information
+        Returns: {name, username, profile_pic, follower_count}
+        """
+        url = f"{self.base_url}/{user_id}"
+        params = {
+            "fields": "name,username,profile_pic,follower_count",
+            "access_token": self.access_token
+        }
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        logger.info(f"Retrieved user info for {user_id}")
+                        return data
+                    else:
+                        logger.error(f"Failed to get user info: {response.status}")
+                        return {}
+        except Exception as e:
+            logger.error(f"Error fetching user info: {str(e)}")
+            return {}
     
     async def send_text_message(self, recipient_id: str, text: str) -> bool:
         """

@@ -22,7 +22,8 @@ class OpenAIHandler:
     async def generate_response(
         self, 
         user_message: str, 
-        conversation_history: List[Dict[str, str]] = None
+        conversation_history: List[Dict[str, str]] = None,
+        user_info: dict = None
     ) -> str:
         """
         Generate a natural language response using OpenAI
@@ -30,14 +31,23 @@ class OpenAIHandler:
         Args:
             user_message: The user's message
             conversation_history: Recent conversation context
+            user_info: Instagram user information (name, username, etc.)
         
         Returns:
             AI-generated response text
         """
         try:
+            # Build system prompt with user context
+            system_content = self.system_prompt
+            if user_info and user_info.get('name'):
+                system_content += f"\n\nYou are chatting with {user_info['name']}"
+                if user_info.get('username'):
+                    system_content += f" (@{user_info['username']})"
+                system_content += ". Use their name naturally in conversation when appropriate."
+            
             # Build messages array
             messages = [
-                {"role": "system", "content": self.system_prompt}
+                {"role": "system", "content": system_content}
             ]
             
             # Add conversation history (last N messages for context)

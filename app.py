@@ -184,9 +184,14 @@ async def process_webhook(data: dict):
 async def handle_user_message(sender_id: str, recipient_id: str, message_text: str):
     """
     Handle individual user message with NLP and media triggers
+    Fetches user info for personalized responses
     """
     try:
         logger.info(f"Processing message from {sender_id}: {message_text}")
+        
+        # Fetch user information from Instagram Graph API
+        user_info = await instagram_handler.get_user_info(sender_id)
+        logger.info(f"User info: {user_info}")
         
         # Update user session
         session_manager.add_message(sender_id, "user", message_text)
@@ -198,11 +203,12 @@ async def handle_user_message(sender_id: str, recipient_id: str, message_text: s
             # Send media (image or audio)
             await send_media_response(sender_id, media_response)
         
-        # Generate NLP response
+        # Generate NLP response with user personalization
         conversation_history = session_manager.get_context(sender_id)
         ai_response = await openai_handler.generate_response(
             message_text, 
-            conversation_history
+            conversation_history,
+            user_info=user_info
         )
         
         # Send response with human-like delay
@@ -294,12 +300,13 @@ async def test_send_message(request: Request):
 async def chat_endpoint(request: Request):
     """
     Standalone chat endpoint for testing without Instagram
-    MVP: NLP responses + typing delays + media triggers
+    MVP: NLP responses + typing delays
     """
     try:
         data = await request.json()
         user_id = data.get("user_id", "test_user")
         message_text = data.get("message", "").strip()
+        user_name = data.get("user_name", None)  # Optional: user's name
         
         if not message_text:
             raise HTTPException(status_code=400, detail="Message is required")
@@ -309,11 +316,17 @@ async def chat_endpoint(request: Request):
         # Update user session
         session_manager.add_message(user_id, "user", message_text)
         
+        # Build user info for personalized responses
+        user_info = {}
+        if user_name:
+            user_info['name'] = user_name
+        
         # Calculate typing delay
         conversation_history = session_manager.get_context(user_id)
         ai_response = await openai_handler.generate_response(
             message_text, 
-            conversation_history
+            conversation_history,
+            user_info
         )
         
         typing_delay = delay_handler.calculate_delay(ai_response)
@@ -336,6 +349,108 @@ async def chat_endpoint(request: Request):
     
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/triggers")
+async def get_triggers():
+    """Get all media and voice triggers"""
+    return {
+        "triggers": config.get("media_triggers", []),
+        "typing_delay": config.get("typing_delay", {})
+    }
+
+
+@app.post("/triggers/add")
+async def add_trigger(request: Request):
+    """Add a new media or voice trigger"""
+    try:
+        data = await request.json()
+        new_trigger = {
+            "name": data.get("name"),
+            "keywords": data.get("keywords", []),
+            "type": data.get("type"),  # 'image' or 'audio'
+            "path": data.get("path")
+        }
+        
+        if not all([new_trigger["name"], new_trigger["keywords"], new_trigger["type"], new_trigger["path"]]):
+            raise HTTPException(status_code=400, detail="Missing required fields")
+        
+        config["media_triggers"].append(new_trigger)
+        
+        # Reload media handler with new triggers
+        global media_handler
+        media_handler = MediaHandler(config)
+        
+        # Save to config file
+        try:
+            with open('config.json', 'w') as f:
+                json.dump(config, f, indent=2)
+        except:
+            pass  # In production, config is env-var based
+        
+        return {"status": "success", "trigger": new_trigger}
+    
+    except Exception as e:
+        logger.error(f"Error adding trigger: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/triggers/{trigger_name}")
+async def delete_trigger(trigger_name: str):
+    """Delete a trigger by name"""
+    try:
+        config["media_triggers"] = [
+            t for t in config["media_triggers"] 
+            if t["name"] != trigger_name
+        ]
+        
+        # Reload media handler
+        global media_handler
+        media_handler = MediaHandler(config)
+        
+        # Save to config file
+        try:
+            with open('config.json', 'w') as f:
+                json.dump(config, f, indent=2)
+        except:
+            pass
+        
+        return {"status": "success", "deleted": trigger_name}
+    
+    except Exception as e:
+        logger.error(f"Error deleting trigger: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/settings/delay")
+async def update_delay_settings(request: Request):
+    """Update typing delay settings"""
+    try:
+        data = await request.json()
+        
+        if "base_seconds" in data:
+            config["typing_delay"]["base_seconds"] = float(data["base_seconds"])
+        if "per_word_seconds" in data:
+            config["typing_delay"]["per_word_seconds"] = float(data["per_word_seconds"])
+        if "max_seconds" in data:
+            config["typing_delay"]["max_seconds"] = float(data["max_seconds"])
+        
+        # Reload delay handler
+        global delay_handler
+        delay_handler = DelayHandler(config)
+        
+        # Save to config file
+        try:
+            with open('config.json', 'w') as f:
+                json.dump(config, f, indent=2)
+        except:
+            pass
+        
+        return {"status": "success", "typing_delay": config["typing_delay"]}
+    
+    except Exception as e:
+        logger.error(f"Error updating delay settings: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
